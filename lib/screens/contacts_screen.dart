@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flash_chat/constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'chat_screen.dart';
 
 final _firestore = Firestore.instance;
 FirebaseUser loggedInUser;
@@ -118,7 +119,13 @@ class _ContactScreenState extends State<ContactScreen> {
                           //doesnt exist
                         } else {
                           print('contact exists');
-                          //TODO switch screen to message screen with contact email
+                          Navigator.push(context,
+                              MaterialPageRoute(builder: (context) {
+                            return ChatScreen(
+                              contactID: searchText,
+                              userID: userEmail,
+                            );
+                          }));
                         }
 //                        _firestore.collection('messages').add({
 //                          'text': searchText,
@@ -193,7 +200,7 @@ class ContactsStream extends StatelessWidget {
 }
 
 class ContactBox extends StatelessWidget {
-  ContactBox({this.contactName, this.lastMessage});
+  ContactBox({@required this.contactName, @required this.lastMessage});
   final String contactName;
   final String lastMessage;
 
@@ -228,7 +235,12 @@ class ContactBox extends StatelessWidget {
             ),
           ),
           onPressed: () {
-            //TODO push to chat screen with name
+            Navigator.push(context, MaterialPageRoute(builder: (context) {
+              return ChatScreen(
+                contactID: contactName,
+                userID: userEmail,
+              );
+            }));
           },
         ),
       ],
