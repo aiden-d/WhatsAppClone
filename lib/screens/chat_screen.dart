@@ -1,3 +1,4 @@
+import 'package:flash_chat/screens/contacts_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flash_chat/constants.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -5,7 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 final _firestore = Firestore.instance;
 FirebaseUser loggedInUser;
-
+int latestMessage;
 class ChatScreen extends StatefulWidget {
   final String contactID;
   final String userID;
@@ -81,10 +82,19 @@ class _ChatScreenState extends State<ChatScreen> {
                   FlatButton(
                     onPressed: () {
                       messageTextController.clear();
-                      _firestore.collection('messages').add({
-                        'text': messageText,
-                        'sender': loggedInUser.email,
+//                      _firestore.collection('messages').add({
+//                        'text': messageText,
+//                        'sender': loggedInUser.email,
+//                      });
+    _firestore.collection(widget.userID).document(widget.contactID).updateData({
+                     'message$latestMessage': messageText,
+                       'sender$latestMessage': widget.userID,
+                   });
+                      _firestore.collection(widget.contactID).document(widget.userID).updateData({
+                        'message$latestMessage': messageText,
+                        'sender$latestMessage': widget.userID,
                       });
+
                     },
                     child: Text(
                       'Send',
@@ -107,8 +117,8 @@ class MessagesStream extends StatelessWidget {
   MessagesStream({@required this.contactID, @required this.userID});
   @override
   Widget build(BuildContext context) {
-    return StreamBuilder<QuerySnapshot>(
-      stream: _firestore.collection('messages').snapshots(),
+    return StreamBuilder<DocumentSnapshot>(
+      stream: _firestore.collection(userID).document(contactID).snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Center(
@@ -117,22 +127,39 @@ class MessagesStream extends StatelessWidget {
             ),
           );
         }
-        final messages = snapshot.data.documents.reversed;
+        final messages = snapshot.data;
         List<MessageBubble> messageBubbles = [];
-        for (var message in messages) {
-          final messageText = message.data['text'];
-          final messageSender = message.data['sender'];
+        bool b = true;
+        int i = 0;
+        while (b == true){
 
-          final currentUser = loggedInUser.email;
-
-          final messageBubble = MessageBubble(
-            sender: messageSender,
-            text: messageText,
-            isMe: currentUser == messageSender,
-          );
-
-          messageBubbles.add(messageBubble);
+          if (messages.data['message$i'] != null)
+          {
+            bool isMe = false;
+            if (messages.data['sender$i'] == userID)
+            {isMe = true;}
+            final messageBubble = MessageBubble(sender: messages.data[messages['sender$i']], text: messages.data['message$i'], isMe: isMe );
+            messageBubbles.add(messageBubble);
+          }
+          else{b = false;}
         }
+        //TODO make sure that there are not errors because of the latest message conflict
+        latestMessage = i;
+
+//        for (var message in messages) {
+//          final messageText = message.data['text'];
+//          final messageSender = message.data['sender'];
+//
+//          final currentUser = loggedInUser.email;
+//
+//          final messageBubble = MessageBubble(
+//            sender: messageSender,
+//            text: messageText,
+//            isMe: currentUser == messageSender,
+//          );
+//
+//          messageBubbles.add(messageBubble);
+//        }
         return Expanded(
           child: ListView(
             reverse: true,
