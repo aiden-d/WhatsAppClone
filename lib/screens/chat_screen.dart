@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 final _firestore = Firestore.instance;
 FirebaseUser loggedInUser;
 int latestMessage;
+
 class ChatScreen extends StatefulWidget {
   final String contactID;
   final String userID;
@@ -53,8 +54,8 @@ class _ChatScreenState extends State<ChatScreen> {
                 Navigator.pop(context);
               }),
         ],
-        title: Text('⚡️Chat'),
-        backgroundColor: Colors.lightBlueAccent,
+        title: Text(widget.contactID),
+        backgroundColor: Colors.teal,
       ),
       body: SafeArea(
         child: Column(
@@ -80,21 +81,52 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
                   ),
                   FlatButton(
-                    onPressed: () {
+                    onPressed: () async {
                       messageTextController.clear();
 //                      _firestore.collection('messages').add({
 //                        'text': messageText,
 //                        'sender': loggedInUser.email,
 //                      });
-    _firestore.collection(widget.userID).document(widget.contactID).updateData({
-                     'message$latestMessage': messageText,
-                       'sender$latestMessage': widget.userID,
-                   });
-                      _firestore.collection(widget.contactID).document(widget.userID).updateData({
-                        'message$latestMessage': messageText,
-                        'sender$latestMessage': widget.userID,
-                      });
+                      CollectionReference user1 =
+                          _firestore.collection(widget.userID);
+                      CollectionReference user2 =
+                          _firestore.collection(widget.contactID);
+                      DocumentSnapshot ds =
+                          await user1.document(widget.contactID).get();
 
+                      /////////////////////
+                      if (!ds.exists) {
+                        print('document is null');
+                        user1.document(widget.contactID).setData({
+                          'message$latestMessage': messageText,
+                          'sender$latestMessage': widget.userID,
+                        })
+                          ..then((value) => print("User Added")).catchError(
+                              (error) => print("Failed to add user: $error"));
+                        //////////////////
+                        user2.document(widget.userID).setData({
+                          'message$latestMessage': messageText,
+                          'sender$latestMessage': widget.userID,
+                        })
+                          ..then((value) => print("User Added")).catchError(
+                              (error) => print("Failed to add user: $error"));
+                      }
+                      ////////////////
+                      else {
+                        user1.document(widget.contactID).updateData({
+                          'message$latestMessage': messageText,
+                          'sender$latestMessage': widget.userID,
+                        })
+                          ..then((value) => print("User Added")).catchError(
+                              (error) => print("Failed to add user: $error"));
+                        ///////////////
+                        user2.document(widget.userID).updateData({
+                          'message$latestMessage': messageText,
+                          'sender$latestMessage': widget.userID,
+                        })
+                          ..then((value) => print("User Added")).catchError(
+                              (error) => print("Failed to add user: $error"));
+                      }
                     },
                     child: Text(
                       'Send',
@@ -131,17 +163,33 @@ class MessagesStream extends StatelessWidget {
         List<MessageBubble> messageBubbles = [];
         bool b = true;
         int i = 0;
-        while (b == true){
-
-          if (messages.data['message$i'] != null)
-          {
-            bool isMe = false;
-            if (messages.data['sender$i'] == userID)
-            {isMe = true;}
-            final messageBubble = MessageBubble(sender: messages.data[messages['sender$i']], text: messages.data['message$i'], isMe: isMe );
-            messageBubbles.add(messageBubble);
+        while (b == true) {
+          print('int i = $i');
+          String currentMessage;
+          String currentSender;
+          try {
+            currentMessage = messages.data['message$i'];
+            currentSender = messages.data['sender$i'];
+            print(currentMessage);
+            print(currentSender);
+          } catch (e) {
+            print('yeet');
+            print(e);
+            b = false;
           }
-          else{b = false;}
+
+          if (currentMessage != null) {
+            bool isMe = false;
+            if (currentSender == userID) {
+              isMe = true;
+            }
+            final messageBubble = MessageBubble(
+                sender: currentSender, text: currentMessage, isMe: isMe);
+            messageBubbles.add(messageBubble);
+            i++;
+          } else {
+            b = false;
+          }
         }
         //TODO make sure that there are not errors because of the latest message conflict
         latestMessage = i;
@@ -162,7 +210,7 @@ class MessagesStream extends StatelessWidget {
 //        }
         return Expanded(
           child: ListView(
-            reverse: true,
+            reverse: false,
             padding: EdgeInsets.symmetric(horizontal: 10.0, vertical: 20.0),
             children: messageBubbles,
           ),
@@ -187,13 +235,13 @@ class MessageBubble extends StatelessWidget {
         crossAxisAlignment:
             isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
         children: <Widget>[
-          Text(
-            sender,
-            style: TextStyle(
-              fontSize: 12.0,
-              color: Colors.black54,
-            ),
-          ),
+//          Text(
+//            sender,
+//            style: TextStyle(
+//              fontSize: 12.0,
+//              color: Colors.black54,
+//            ),
+//          ),
           Material(
             borderRadius: isMe
                 ? BorderRadius.only(

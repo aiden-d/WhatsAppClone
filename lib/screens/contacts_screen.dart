@@ -86,7 +86,7 @@ class _ContactScreenState extends State<ContactScreen> {
               }),
         ],
         title: Text('⚡️Chat'),
-        backgroundColor: Colors.teal,
+
       ),
       body: Container(
         child: SafeArea(
@@ -112,17 +112,18 @@ class _ContactScreenState extends State<ContactScreen> {
                     FlatButton(
                       onPressed: () async {
                         final snapshot = await _firestore
-                            .collection(searchText)
+                            .collection(searchText.trim())
                             .getDocuments();
                         if (snapshot.documents.length == 0) {
                           print('doesnt exist');
                           //doesnt exist
                         } else {
-                          print('contact exists');
+                          print(
+                              'contact exists pushing user: $userEmail + contact: $searchText');
                           Navigator.push(context,
                               MaterialPageRoute(builder: (context) {
                             return ChatScreen(
-                              contactID: searchText,
+                              contactID: searchText.trim(),
                               userID: userEmail,
                             );
                           }));
@@ -156,10 +157,7 @@ class ContactsStream extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return StreamBuilder<QuerySnapshot>(
-      stream: _firestore
-          .collection(userEmail)
-          .orderBy('created_at', descending: false)
-          .snapshots(),
+      stream: _firestore.collection(userEmail).snapshots(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return Center(
@@ -181,11 +179,13 @@ class ContactsStream extends StatelessWidget {
 //          } else {
 //            isMe = false;
 //          }
-          final messageBubble = ContactBox(
-            contactName: message.documentID,
-            lastMessage: 'Hello! how are you',
-          );
-          messageBubbles.add(messageBubble);
+          if (message.documentID != userEmail) {
+            final messageBubble = ContactBox(
+              contactName: message.documentID,
+              lastMessage: 'Hello! how are you',
+            );
+            messageBubbles.add(messageBubble);
+          }
         }
         return Expanded(
           child: ListView(
